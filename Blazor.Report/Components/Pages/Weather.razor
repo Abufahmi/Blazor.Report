@@ -1,0 +1,104 @@
+﻿@using Models
+
+@page "/weather"
+@inject IJSRuntime Js
+
+<PageTitle>Weather</PageTitle>
+
+<h1>Weather</h1>
+
+<p>This component demonstrates showing data.</p>
+
+@if (forecasts == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <h3>Download Report</h3>
+    <div class="col-4">
+        <select class="form-select mb-3" @bind="FileType" @oninput="OnFileChanged">
+            @foreach (var item in FileTypes)
+            {
+                <option value="@item">@item</option>
+            }
+        </select>
+    </div>
+
+    <a class="btn btn-primary my-3" @onclick="DownloadFile">
+        Download
+    </a>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (F)</th>
+                <th>Summary</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var forecast in forecasts)
+            {
+                <tr>
+                    <td>@forecast.Date.ToShortDateString()</td>
+                    <td>@forecast.TemperatureC</td>
+                    <td>@forecast.TemperatureF</td>
+                    <td>@forecast.Summary</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+@code {
+    private WeatherForecast[]? forecasts;
+    string FileType = string.Empty;
+    List<string> FileTypes = new List<string>
+    {
+        "Word",
+        "PDF",
+    };
+
+    void OnFileChanged(ChangeEventArgs args)
+    {
+        if (args?.Value == null) return;
+        FileType = args.Value as string ?? string.Empty;
+    }
+
+    async Task DownloadFile()
+    {
+        if (FileType == null || string.IsNullOrWhiteSpace(FileType))
+            return;
+
+        // navManager.NavigateTo($"api/Categories/GetCategories/{FileType}");
+        string fileName = string.Empty;
+        if (FileType == "Word")
+        {
+            fileName = "weather.doc";
+        }
+        else if (FileType == "PDF")
+        {
+            fileName = "weather.pdf";
+        }
+
+
+        var fileURL = $"/api/Reports/GenerateReport/{FileType}";
+        await Js.InvokeVoidAsync("triggerFileDownload", fileName, fileURL);
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Simulate asynchronous loading to demonstrate a loading indicator
+        await Task.Delay(500);
+
+        var startDate = DateOnly.FromDateTime(DateTime.Now);
+        var summaries = new[] { "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching" };
+        forecasts = Enumerable.Range(1, 50).Select(index => new WeatherForecast
+        {
+            Date = startDate.AddDays(index),
+            TemperatureC = Random.Shared.Next(-20, 55),
+            Summary = summaries[Random.Shared.Next(summaries.Length)]
+        }).ToArray();
+    }
+}
